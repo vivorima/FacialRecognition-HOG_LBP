@@ -237,7 +237,7 @@ face = image[y + 1:y + h, x + 1:x + w]
 face = cv2.resize(face, (normalized, normalized), interpolation=cv2.INTER_AREA)
 cv2.imwrite('../Newface.png', face)
 # ---------------------------------------------------
-# face = cv2.imread('selena2.png',0)
+# face = cv2.imread('ines.jpg',0)
 # face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 # faces = face_cascade.detectMultiScale(face, scaleFactor=1.1, minNeighbors=5, minSize=(100,100))
 # for x, y, w, h in faces:
