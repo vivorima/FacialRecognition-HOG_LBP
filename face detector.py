@@ -1,8 +1,7 @@
 from Algorithms import *
 
-seuil_lbp = 700
-seuil_hog = 16
-seuil_moy = 50
+seuil_lbp = 840
+seuil_hog = 20
 
 
 # Opens camera, returns a (not normalized) grayscale image when u press r
@@ -19,10 +18,10 @@ def FaceBoundingBox():
         cv2.imshow('Face Detector', frame)
         key = cv2.waitKey(1)
         if key == ord('r'):
-            cv2.imwrite('../image.png', frame)
+            cv2.imwrite('Newimage.png', frame)
             video.release()
             cv2.destroyAllWindows()
-            return x, y, w, h, cv2.imread('../image.png', 0)
+            return x, y, w, h, cv2.imread('Newimage.png', 0)
 
 
 # opens camera, crops the image(BB), normalizes the image, retruns just the face
@@ -32,7 +31,7 @@ def getFace(normalized):
     face = image[y + 1:y + h, x + 1:x + w]
     # resize image to normalized scale value
     face = cv2.resize(face, (normalized, normalized), interpolation=cv2.INTER_AREA)
-    cv2.imwrite('../Newface.png', face)
+    cv2.imwrite('Newface.png', face)
     return face
 
 
@@ -86,14 +85,12 @@ def recognize(face, normalized, f_lbp, f_hog):
 
     # compare values with dataset
     with open('../dataset/dataLBP.csv', 'rt') as f1, open("../dataset/dataHOG.csv") as f2:
-        print("comparing LBP and HOG values with values from dataset")
-
+        # print("comparing LBP and HOG values with values from dataset")
         # get liste des valeurs du dataset
         lbp_dataset = list(csv.reader(f1))
         hog_dataset = list(csv.reader(f2))
         nb_imgs = len(lbp_dataset)
         match = 0
-        moy = 0
         moy_lbp = 0
         moy_hog = 0
 
@@ -105,49 +102,27 @@ def recognize(face, normalized, f_lbp, f_hog):
             # calcul la distance entre l'image input et l'image du dataset
             distance_lbp = np.linalg.norm(np.array(ref_lbp) - np.array(Imageinput_LBPvalues))
             distance_hog = np.linalg.norm(np.array(ref_hog) - np.array(Imageinput_HOGvalues))
+            moy_lbp += distance_lbp/nb_imgs
+            moy_hog += distance_hog/nb_imgs
 
-            moy += (distance_lbp / distance_hog) / nb_imgs
-            moy_lbp += distance_lbp / nb_imgs
-            moy_hog += distance_hog / nb_imgs
-
-            if (moy <= seuil_moy) or (moy_lbp <= seuil_lbp and moy_hog <= seuil_hog):
+            # nb images qui match
+            if distance_lbp <= seuil_lbp and distance_hog <= seuil_hog:
                 match += 1
 
-        print("Moyennes: ", moy, moy_lbp, moy_hog, "\nMatches: ", match, "/", nb_imgs)
+            # print(distance_lbp, distance_hog)
 
-        if (moy <= seuil_moy) or (match >= nb_imgs / 2) or (moy_lbp <= seuil_lbp and moy_hog <= seuil_hog and match >= nb_imgs / 2):
-            print("MATCH")
-            return True
+        print("moyenne: ", moy_lbp,moy_hog,match)
+        cv2.imshow('Face Detector', face)
+        if (match >= nb_imgs / 2) or (moy_lbp <= seuil_lbp and moy_hog <= seuil_hog):
+            return "MATCH"
         else:
-            print("NOT A MATCH")
-            return False
+            return "NOT A MATCH"
 
-
-def RealTime(normalized, f_lbp, f_hog):
-    found = False
-    face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
-    video = cv2.VideoCapture(0)
-
-    while not found:
-        check, frame = video.read()
-        faces = face_cascade.detectMultiScale(frame, scaleFactor=1.1, minNeighbors=2, minSize=(100, 100))
-        for x, y, w, h in faces:
-            frame = cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 1)
-            cv2.imshow('Face Detector', frame)
-            cv2.waitKey(1)
-            frame = frame[y + 1:y + h, x + 1:x + w]
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            frame = cv2.resize(frame, (normalized, normalized), interpolation=cv2.INTER_AREA)
-            if recognize(frame, normalized, f_lbp, f_hog):
-                found = True
-                video.release()
-                cv2.destroyAllWindows()
 
 
 def RealTime(normalized, f_lbp, f_hog):
     face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
     video = cv2.VideoCapture(0)
-
 
     while True:
         check, frame = video.read()
@@ -155,17 +130,18 @@ def RealTime(normalized, f_lbp, f_hog):
         if len(faces) > 0:
             for x, y, w, h in faces:
                 frame = cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 1)
-            cv2.imshow('Face Detector', frame)
-
-            face = frame[y + 1:y + h, x + 1:x + w]
-            # resize image to normalized scale value
-            face = cv2.resize(face, (normalized, normalized), interpolation=cv2.INTER_AREA)
-            face = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)
-            match = recognize(face,normalized,f_lbp,f_hog)
-            if match:
-                video.release()
-                cv2.destroyAllWindows()
+                face = frame[y + 1:y + h, x + 1:x + w]
+                # resize image to normalized scale value
+                face = cv2.resize(face, (normalized, normalized), interpolation=cv2.INTER_AREA)
+                face = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)
+                person = recognize(face, normalized, f_lbp, f_hog)
+                cv2.putText(frame, person, (x, y-5), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2,cv2.LINE_AA)
                 break
+            cv2.imshow('Face Detector', frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+    video.release()
+    cv2.destroyAllWindows()
 
 
 def main():
@@ -174,13 +150,11 @@ def main():
     f_lbp, f_hog = 8, 6
 
     # ----------------------REAL TIME DETECTION------------------------
-    RealTime(normalized, f_lbp, f_hog)
-
+    # RealTime(normalized, f_lbp, f_hog)
     # --------------RECOGNIZE FACE FROM CAMERA/IMAGE------------------
     # face = getFace(normalized)  # Camera
-    # face = loadImage("face.png", normalized)  # Existing Image
-    # recognize(face, normalized, f_lbp, f_hog)
-
+    face = loadImage("Test Pictures/real_00059.jpg", normalized)  # Existing Image
+    print(recognize(face, normalized, f_lbp, f_hog))
     # ---------------IMPORT NEW IMAGE TO DATASET -------------------------------
     # newImageForDataset(normalized, f_lbp, f_hog)
 
@@ -189,4 +163,4 @@ if __name__ == "__main__":
     main()
     print("Done")
 
-# cv2.waitKey(0)
+cv2.waitKey(0)

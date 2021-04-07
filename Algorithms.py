@@ -148,6 +148,7 @@ def histogramme(count, titre, data):
     plt.savefig('temp.png')
     return cv2.imread('temp.png')
 
+
 # Saves images to dataset folder
 def saveImages(folder, images):
     for w in range(len(images)):
