@@ -5,3 +5,5 @@ draft
 *.png
 WIN_20210403_12_49_00_Pro.jpg
 *.jpg
+__pycache__/Algorithms.cpython-37.pyc
+__pycache__/Algorithms.cpython-38.pyc
